@@ -4,15 +4,14 @@
 
 [react-native](https://github.com/facebook/react-native) mqtt client module
 
-## MQTT Featues (inherit from native MQTT framework)
+## MQTT Features (inherit from native MQTT framework)
 * Use [MQTT Framework](https://github.com/ckrey/MQTT-Client-Framework) for IOS, [Paho MQTT Client](https://eclipse.org/paho/clients/android/) for Android
-* Support both IOS and Android (now only support IOS)
-* SSL/TSL with 3 mode
-* Native library, support mqtt over tcp and mqtt over websocket
-* Auto reconnect
+* Support both IOS and Android
+* SSL/TLS 
+* Native library, support mqtt over tcp 
 
 ## Warning
-This library in progress developing, api may change, and not support android now
+This library in progress developing, api may change, SSL/TLS non verify 
 
 ## Getting started
 ### Mostly automatic install
@@ -40,77 +39,93 @@ This library in progress developing, api may change, and not support android now
 import com.tuanpm.RCTMqtt.*; // import
 
 
-.addPackage(new RCT<qttPackage()) //for older version
+.addPackage(new RCTMqttPackage()) //for older version
 
 new RCTMqttPackage()           // for newest version of react-native
 ```
 
 -  Append the following lines to `android/settings.gradle` before `include ':app'`:
 
-```java
+```
 include ':react-native-mqtt'
 project(':react-native-mqtt').projectDir = new File(rootProject.projectDir,  '../node_modules/react-native-mqtt/android')
+
 ```
+
 
 - Insert the following lines inside the dependencies block in `android/app/build.gradle`, don't missing `apply plugin:'java'` on top:
 
-```java
+```
 compile project(':react-native-mqtt')
 ```
 
 Notes:
 
-```java
+```
 dependencies {
   compile project(':react-native-mqtt')
 }
 ```
 
 
-But not like this
-
-```java
-buildscript {
-    ...
-    dependencies {
-      compile project(':react-native-mqtt')
-    }
-}
-```
-
 ## Usage
 
 ```javascript
 var mqtt    = require('react-native-mqtt');
 
-var client  = mqtt.Client({
-  uri: 'mqtt://mqtt.yourhost.com:1883'
-});
+/* create mqtt client */
+mqtt.createClient({
+  uri: 'mqtt://test.mosquitto.org:1883', 
+  clientId: 'your_client_id'
+}).then(function(client) {
 
-client.on('connect', function () {
-  client.subscribe('/topic/qos0');
-  client.subscribe('/topic/qos1', 1);
-  client.subscribe('/topic/qos2', 2);
+  client.on('closed', function() {
+    console.log('mqtt.event.closed');
+    
+  });
+  
+  client.on('error', function(msg) {
+    console.log('mqtt.event.error', msg);
+    
+  });
 
-  client.publish('/topic/qos0', 'string will publish');
-});
+  client.on('message', function(msg) {
+    console.log('mqtt.event.message', msg);
+  });
 
-client.on('message', function (topic, message) {
-  // message is Buffer
-  console.log(message.toString());
-  client.disconnect();
+  client.on('connect', function() {
+    console.log('connected');
+    client.subscribe('/data', 0);
+    client.publish('/data', "test", 0, false);
+  });
+
+  client.connect();
 });
 
 ```
 
 ## API
-* `mqtt.Client(options)` with
-  - `uri`: `protocol://host:port`, protocol is [mqtt | mqtts | ws | wss]
-  - `host`: ipaddress or host name (overide by uri if set)
-  - `port`: port number (overide by uri if set)
-  - `tls`: true/false (overide by uri if set to mqtts or wss)
+* `mqtt.createClient(options)`  create new client instance with `options`, async operation
+  - `uri`: `protocol://host:port`, protocol is [mqtt | mqtts]
+  - `host`: ipaddress or host name (override by uri if set)
+  - `port`: port number (override by uri if set)
+  - `tls`: true/false (override by uri if set to mqtts or wss)
+  - `user`: string username
+  - `pass`: string password
+  - `auth`: true/false - override = true if `user` or `pass` exist
+  - `clientId`: string client id
+  - `keepalive`
 
-...
+* `client`
+  - `on(event, callback)`: add event listener for
+    + event: `connect` - client connected
+    + event: `closed` - client disconnected
+    + event: `error` - error
+    + event: `message` - data received with format {topic, data, retain}
+  - `connect`: begin connection
+  - `disconnect`: disconnect
+  - `subscribe(topic, qos)`
+  - `publish(topic, payload, qos, retain)`
 
 ## Todo
 
